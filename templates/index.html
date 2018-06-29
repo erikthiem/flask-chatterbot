@@ -16,6 +16,17 @@
         <input id="buttonInput" type="submit" value="Send">
       </div>
       <script>
+				const speak = (text,rate=1.0) => {
+					console.log('speaking', text)
+					const u = new SpeechSynthesisUtterance()
+					u.text = text
+					u.lang = 'en-US'
+					u.rate = rate
+					u.pitch = 1.0
+					u.volume = 1
+					window.speechSynthesis.speak(u)
+				}
+
         function getBotResponse() {
           var rawText = $("#textInput").val();
           var userHtml = '<p class="userText"><span>' + rawText + '</span></p>';
@@ -25,9 +36,32 @@
           $.get("/get", { msg: rawText }).done(function(data) {
             var botHtml = '<p class="botText"><span>' + data + '</span></p>';
             $("#chatbox").append(botHtml);
+            speak(`${data}`)
             document.getElementById('userInput').scrollIntoView({block: 'start', behavior: 'smooth'});
           });
+
+          // Restart the voice input
+          voice_input.stop();
         }
+        
+
+        // Start voice input on page load
+        var voice_input = new webkitSpeechRecognition();
+        voice_input.start();
+
+        // Copy voice input to text input field and trigger 'enter'
+        voice_input.onresult = function(event) { 
+          voice_text = event.results[0][0].transcript;
+          $("#textInput").val(voice_text);
+          //sleep(5); TODO this isn't quite working.
+          getBotResponse();
+        }
+
+        voice_input.onend = function () {
+          // TODO: make it finish its current phrase before accepting new input
+          voice_input.start();
+        };
+
         $("#textInput").keypress(function(e) {
             if(e.which == 13) {
                 getBotResponse();
